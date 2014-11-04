@@ -1,4 +1,5 @@
 marathon-confgen
 ================
 
-Configuration generator for Mesosphere Marathon
+Load balancer configuration generator for Mesosphere Marathon.
+Currently supports Varnish and Nginx.
