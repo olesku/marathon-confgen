@@ -8,18 +8,18 @@ use Getopt::Long;
 Getopt::Long::Configure("gnu_getopt");
 
 my %backend_properties = (
-  "_default"          =>
+  "_default"                =>
   {
     "max_connections"       => "800",
-        "connect_timeout"       => "5s",
-        "first_byte_timeout"    => "120s",
-    "director_type"     => "round-robin"
+    "connect_timeout"       => "5s",
+    "first_byte_timeout"    => "120s",
+    "director_type"         => "round-robin"
   },
-   #, "/exampleapp"       =>
-   #{
-   #  "max_connections"       => "1024",
-   #  "director_type"         => "client"
-   #}
+ #, "/exampleapp"           =>
+ #{
+ #  "max_connections"       => "1024",
+ #  "director_type"         => "client"
+ #}
 );
 
 my $opt_marathonurl = "http://mymarathonserver:8080", 
@@ -30,8 +30,8 @@ my $opt_marathonurl = "http://mymarathonserver:8080",
 my $result  = GetOptions(
   "u|url=s"     => \$opt_marathonurl,
   "f|format=s"  => \$opt_format,
-  "a|app=s"   => \$opt_app,
-  "h|help"    => \$opt_help
+  "a|app=s"     => \$opt_app,
+  "h|help"      => \$opt_help
 );
 
 sub showHelp {
@@ -69,8 +69,8 @@ sub getAppList {
     next if (!exists($_->{'healthCheckResults'}[0]{'alive'}) || 
   	         $_->{'healthCheckResults'}[0]{'alive'} < 1 ||
       	     !exists($_->{'host'}) || 
-         	 !exists($_->{'ports'}[0]));
-
+           	 !exists($_->{'ports'}[0]));
+  
     $appId = $_->{'appId'};
   
     $obj = {
