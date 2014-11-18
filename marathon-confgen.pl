@@ -7,7 +7,22 @@ use Getopt::Long;
 
 Getopt::Long::Configure("gnu_getopt");
 
-my $opt_marathonurl = "", 
+my %backend_properties = (
+	"_default"					=>
+	{
+		"max_connections"       => "800",
+        "connect_timeout"       => "5s",
+        "first_byte_timeout"    => "120s",
+		"director_type"			=> "round-robin"
+	},
+   #, "/exampleapp" 			=>
+   #{
+   # 	"max_connections"       => "1024",
+   # 	"director_type"         => "client"
+   #}
+);
+
+my $opt_marathonurl = "http://mymarathonserver:8080", 
    $opt_format 		= "varnish",
    $opt_app			= "*",
    $opt_help;
@@ -57,10 +72,7 @@ sub getAppList {
 				 !exists($_->{'ports'}[0]));
 
 		$appId = $_->{'appId'};
-		$appId =~ s/^\///;
-		$appId =~ s/\/|\.|\-/_/g;
-		
-
+	
 		$obj = {
 		  'appId'  => $_->{'appId'},
 		  'taskId' => $_->{'id'},
@@ -89,24 +101,47 @@ sub makeNginxConfig {
 
 sub makeVarnishConfig {
 	my $appList = shift;
+	my $directorType = $backend_properties{"_default"}->{"backend_type"};
 
 	foreach my $appId (sort keys %{$appList}) {
 		printf("# appId: %s\n", @{$appList->{$appId}}[0]->{appId});
 		my @backendList;
+		my $props = "";
+
+		my $propkey = exists($backend_properties{$appId}) ? 
+			$appId : "_default";
+
+		if (exists($backend_properties{$propkey})) {
+			foreach(sort keys %{$backend_properties{$propkey}}) {
+				if ($_ eq "director_type") {
+					$directorType = $backend_properties{$propkey}->{$_};
+					next
+				}
+
+				$props .= sprintf("  .%s = %s;\n", $_, $backend_properties{$propkey}->{$_});
+			}
+		}
 
 		# Create backend definitions.
 		$backendCount = scalar @{$appList->{$appId}};
 		foreach (sort {$a->{port} <=> $b->{port}} @{$appList->{$appId}}) {
+
+			$appId =~ s/^\///;
+			$appId =~ s/\/|\.|\-/_/g;
+	
 			my $backendId = sprintf("%s%s", $appId, 
 								($backendCount > 1) ? ("_" . $_->{port}) : "");		
+
 
 			printf("backend %s {\n" .
 				   "  .host = \"%s\";\n" .  
 				   "  .port = \"%s\";\n".
+				   "%s" .
 				   "}\n\n"
 				  , $backendId, 
 					$_->{host}, 
-					$_->{port});
+					$_->{port},
+					$props);
 
 		 	if ($backendCount > 1) {
 				push(@backendList, $backendId);
@@ -115,7 +150,7 @@ sub makeVarnishConfig {
 
 		# Create director if we have more than one backend for the appId.
 		if ($backendCount > 1) {
-			printf("director %s client {\n", $appId);
+			printf("director %s %s {\n", $appId, $directorType);
 			foreach (sort @backendList) {
 				printf("  { .backend = %s; .weight  = 1; }\n", $_);
 			}
